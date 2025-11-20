@@ -27,6 +27,7 @@
 
 ### Part 2: Cracking SHA-256 Hash Using Brute-Force Attack
 1. Create a SHA-256 Hash: Generate a SHA-256 hash (e.g., for "hello") and add it to `hashes.txt`
+  - echo -n "hello" | sha256sum | tr -d - > hashes.txt
 2. Run Hashcat with Brute-Force Attack:
    - Use the command format: `hashcat -m 1400 -a 3 -o cracked_passwords.txt hashes.txt ?a?a?a?a?a`
    - `-m 1400`: Specifies the hash type as SHA-256
